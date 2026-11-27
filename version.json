@@ -1,13 +1,12 @@
 {
   "name": "ZnisBack Studio",
-  "version": "1.0.0",
-  "build": 1,
+  "version": "1.2.0",
+  "build": 3,
   "updated_at": "2026-11-26",
   "notes": [
-    "Lançamento inicial",
-    "Login individual para znisback e lnisback",
-    "Upload e compartilhamento privado de arquivos",
-    "Chat entre os dois usuários",
-    "Aba UPDT e interface mobile-first"
+    "Foto de perfil (topo, aba Início e chat)",
+    "Player de áudio no site com controles na tela de bloqueio",
+    "Realtime com um canal por tabela",
+    "SQL: coluna avatar com permissão só na própria conta"
   ]
 }
