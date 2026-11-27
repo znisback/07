@@ -62,7 +62,7 @@ body.has-player #dashboard{padding-bottom:calc(190px + env(safe-area-inset-botto
  <div class="stats"><div class="stat"><strong id="fileCount">—</strong><span>ARQUIVOS NA BIBLIOTECA</span></div><div class="stat"><strong id="sharedCount">—</strong><span>COMPARTILHADOS COM VOCÊ</span></div><div class="stat"><strong id="messageCount">—</strong><span>MENSAGENS</span></div></div>
  <div class="section-head"><h2>Seu espaço</h2><span class="muted">SINCRONIZADO ONLINE</span></div>
  <div class="tabs" id="tabs">
-  <button class="tab active" data-view="home">Visão geral</button><button class="tab" data-view="files">Arquivos</button><button class="tab" data-view="chat">Chat</button><button class="tab" data-view="updt">UPDT</button>
+  <button class="tab active" data-view="home">Visão geral</button><button class="tab" data-view="files">Arquivos</button><button class="tab" data-view="chat">Chat</button><button class="tab" data-view="ia">IA</button><button class="tab" data-view="updt">UPDT</button>
  </div>
  <main>
   <div class="view" id="view-home"><div class="panel profile-card"><div id="profileAvatar"></div><div><b id="profileName"></b><p class="muted" style="margin:2px 0 0">Foto de perfil</p><div class="share-row"><button class="ghost" onclick="pickAvatar()">Trocar foto</button><button class="ghost hidden" id="avatarRemove" onclick="removeAvatar()">Remover</button></div></div><input id="avatarInput" type="file" accept="image/*" class="hidden"></div><div class="panel" style="margin-top:12px"><div class="section-head" style="margin-top:0"><h2>Comece por aqui</h2></div><p class="muted" style="line-height:1.7">Envie um beat, uma música finalizada ou qualquer arquivo de produção. Depois do upload, você poderá compartilhar com o outro usuário. Use o chat para trocar ideias e referências.</p><button class="primary" onclick="switchView('files')">＋ Enviar arquivo</button></div><div class="section-head"><h2>Atividade recente</h2></div><div id="recentFiles" class="file-list"><div class="empty">Carregando biblioteca…</div></div></div>
@@ -72,11 +72,34 @@ body.has-player #dashboard{padding-bottom:calc(190px + env(safe-area-inset-botto
   </div>
   <div class="view hidden" id="view-chat"><div class="panel"><div class="section-head" style="margin-top:0"><h2>Chat privado</h2><span class="badge">somente vocês dois</span></div><div class="chat-box" id="chatMessages"><div class="empty">Carregando conversa…</div></div><form id="chatForm" class="chat-compose"><input id="chatInput" class="field" placeholder="Escreva uma mensagem…" maxlength="2000" autocomplete="off"><button class="primary" type="submit">Enviar</button></form></div></div>
   <div class="view hidden" id="view-updt"><div class="panel"><div class="section-head" style="margin-top:0"><h2>UPDT · Atualizações</h2><span class="badge" id="updtBadge"></span></div><div id="updtList"></div></div></div>
+  <div class="view hidden" id="view-ia">
+   <div class="panel">
+    <div class="section-head" style="margin-top:0"><h2>IA · Continuar letra</h2><span class="badge">Groq</span></div>
+    <p class="muted" style="margin-bottom:14px;line-height:1.5">Escreve o começo do verso e a IA continua no mesmo fluxo e vibe.</p>
+    <textarea id="iaInput" class="field" rows="5" placeholder="Ex: meu Deus eu sou tão sozin..." style="resize:vertical;min-height:110px"></textarea>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+     <select id="iaStyle" class="field" style="flex:1;min-width:140px">
+      <option value="natural">Continuar natural</option>
+      <option value="agressivo">Mais agressivo</option>
+      <option value="melancolico">Mais melancólico</option>
+      <option value="rimado">Focar em rima</option>
+     </select>
+     <button class="primary" id="iaGenerateBtn" style="white-space:nowrap">Continuar ↗</button>
+    </div>
+    <div id="iaResultBox" class="hidden" style="margin-top:16px">
+     <div class="section-head" style="margin-top:0"><h2 style="font-size:15px">Resultado</h2>
+      <button class="ghost" id="iaCopyBtn" style="padding:6px 10px;font-size:12px">Copiar</button>
+     </div>
+     <div id="iaResult" style="background:#ffffff08;border:1px solid var(--line);border-radius:14px;padding:14px;font-size:14px;line-height:1.6;white-space:pre-wrap"></div>
+    </div>
+    <div id="iaStatus" class="muted" style="margin-top:12px;font-size:12px"></div>
+   </div>
+  </div>
  </main>
 </section>
 </div>
 <div class="copyright hidden" id="copyright">@znisback</div>
-<div class="footer hidden" id="footer"><nav class="nav"><button class="active" data-nav="home"><span>⌂</span>Início</button><button data-nav="files"><span>♫</span>Arquivos</button><button data-nav="chat"><span>◌</span>Chat</button><button data-nav="updt"><span>✦</span>UPDT</button></nav></div>
+<div class="footer hidden" id="footer"><nav class="nav"><button class="active" data-nav="home"><span>⌂</span>Início</button><button data-nav="files"><span>♫</span>Arquivos</button><button data-nav="chat"><span>◌</span>Chat</button><button data-nav="ia"><span>✧</span>IA</button><button data-nav="updt"><span>✦</span>UPDT</button></nav></div>
 <div id="player" class="player hidden"><div class="player-info"><b id="playerTitle"></b><small id="playerSub"></small></div><div class="player-ctl"><button id="playBtn" class="play-main" aria-label="Tocar ou pausar">▶</button><input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Posição da faixa"><span id="playerTime" class="muted">0:00</span><button class="icon-btn" aria-label="Fechar player" title="Fechar" onclick="closePlayer()">×</button></div><audio id="audio" preload="metadata"></audio></div>
 <div id="toast" class="toast"></div>
 <script>
@@ -173,7 +196,83 @@ function showLogin(){closePlayer();session=null;username=null;otherId=null;files
 async function logout(){showLogin();if(db)await db.auth.signOut({scope:"local"})}
 
 /* ---------- Navegação ---------- */
-function switchView(view){activeView=view;document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===view));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.nav===view));["home","files","chat","updt"].forEach(v=>$("view-"+v).classList.toggle("hidden",v!==view));if(view==="chat")loadMessages(true);if(view==="files")loadFiles()}
+
+/* ---------- IA · Continuar letra (Groq) ---------- */
+const GROQ_API_KEY = "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";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+async function generateVerse() {
+  const input = $("iaInput").value.trim();
+  const style = $("iaStyle").value;
+  const btn = $("iaGenerateBtn");
+  const status = $("iaStatus");
+  const resultBox = $("iaResultBox");
+  const result = $("iaResult");
+
+  if (!input) {
+    toast("Escreve alguma coisa primeiro.");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Gerando…";
+  status.textContent = "Pensando no verso…";
+  resultBox.classList.add("hidden");
+
+  let stylePrompt = "Continue a letra de forma natural, mantendo o mesmo ritmo, vibe e linguagem.";
+  if (style === "agressivo") stylePrompt = "Continue a letra de forma mais agressiva, com mais força e atitude.";
+  if (style === "melancolico") stylePrompt = "Continue a letra de forma mais melancólica e introspectiva.";
+  if (style === "rimado") stylePrompt = "Continue a letra focando em rimas boas e fluxo natural.";
+
+  const system = `Você é um ghostwriter de rap e trap brasileiro. 
+Continue exatamente de onde o usuário parou. 
+Não repita o que ele já escreveu. 
+Mantenha a mesma linguagem, gírias e energia. 
+Responda somente com a continuação da letra, sem explicações, sem aspas e sem títulos.`;
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: stylePrompt + "\\n\\nLetra até agora:\\n" + input }
+        ],
+        temperature: 0.85,
+        max_tokens: 400
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || "Erro na API");
+
+    const text = data.choices?.[0]?.message?.content?.trim() || "Não consegui gerar.";
+    result.textContent = text;
+    resultBox.classList.remove("hidden");
+    status.textContent = "";
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Erro: " + (err.message || "tente de novo");
+    toast("Falha ao gerar. Verifique a internet.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Continuar ↗";
+  }
+}
+
+$("iaGenerateBtn")?.addEventListener("click", generateVerse);
+$("iaCopyBtn")?.addEventListener("click", () => {
+  const text = $("iaResult").textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => toast("Copiado!")).catch(() => toast("Não foi possível copiar"));
+});
+
+function switchView(view){activeView=view;document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===view));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.nav===view));["home","files","chat","ia","updt"].forEach(v=>$("view-"+v).classList.toggle("hidden",v!==view));if(view==="chat")loadMessages(true);if(view==="files")loadFiles()}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.nav)));
 async function refreshAll(){await loadProfiles();await Promise.all([loadFiles(),loadMessages(true)])}
