@@ -1,12 +1,9 @@
 {
-  "name": "ZnisBack Studio",
-  "version": "1.4.0",
-  "build": 6,
+  "name": "znisBack Studio",
+  "version": "1.4.1",
+  "build": 7,
   "updated_at": "2026-11-27",
   "notes": [
-    "IA agora usa uma Edge Function do Supabase; a chave da Groq não fica mais exposta no HTML.",
-    "Erros da IA aparecem com mensagem clara (sessão expirada, limite de chamadas, texto longo).",
-    "Limite de 4000 caracteres na entrada da IA.",
-    "version.json sincronizado com o APP_BUILD do index.html."
+    "Correção do modelo da IA para o llama-3.1-8b-instant (modelo antigo foi desativado pela Groq)."
   ]
 }
