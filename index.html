@@ -23,7 +23,7 @@ body.booting #loginScreen{visibility:hidden;animation:unboot 0s 3s forwards}@key
 button:focus-visible,.field:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
 @media(hover:none){.user-pick:hover{transform:none}}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-img.avatar{object-fit:cover}.avatar.sm{width:24px;height:24px;border-radius:8px;font-size:10px;margin:0}.avatar.chip{width:28px;height:28px;border-radius:50%;font-size:11px;margin:0}.avatar.big{width:72px;height:72px;border-radius:22px;font-size:26px;margin:0}
+img.avatar{object-fit:cover}.avatar.login-avatar{width:54px;height:54px;border-radius:18px;font-size:15px;margin:0 auto}.login-avatar-wrap{display:flex;justify-content:center;align-items:center;min-height:54px}.avatar.sm{width:24px;height:24px;border-radius:8px;font-size:10px;margin:0}.avatar.chip{width:28px;height:28px;border-radius:50%;font-size:11px;margin:0}.avatar.big{width:72px;height:72px;border-radius:22px;font-size:26px;margin:0}
 .chip-btn{border:0;background:transparent;padding:0;display:grid;border-radius:50%}
 .profile-card{display:flex;align-items:center;gap:16px}.profile-card b{font:600 17px 'Space Grotesk'}
 .bubble b.who{display:flex;align-items:center;gap:6px}
@@ -44,8 +44,8 @@ body.has-player #dashboard{padding-bottom:calc(190px + env(safe-area-inset-botto
   <h1 class="hello">olá, <span>zn &amp; ln</span></h1>
   <p class="sub">Seu espaço privado de criação musical.</p>
   <div class="user-picks">
-   <button class="user-pick" onclick="chooseUser('znisback')"><span class="avatar">Z</span><b>znisback</b></button>
-   <button class="user-pick" onclick="chooseUser('lnisback')"><span class="avatar">L</span><b>lnisback</b></button>
+   <button class="user-pick" onclick="chooseUser('znisback')"><div class="login-avatar-wrap" id="loginAvatarZ"><span class="avatar login-avatar">ZB</span></div><b>znisback</b></button>
+   <button class="user-pick" onclick="chooseUser('lnisback')"><div class="login-avatar-wrap" id="loginAvatarL"><span class="avatar login-avatar">LB</span></div><b>lnisback</b></button>
   </div>
   <div id="loginCard" class="login-card hidden">
    <h2 id="loginTitle">Entrar</h2><p>Digite sua senha para acessar o estúdio.</p>
@@ -85,9 +85,14 @@ const SUPABASE_URL = "https://dpvawnoyzgwokpnaesol.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_hWS-SsuaNRczKV9QQqUDlA_WGzaTBt0";
 const ACCOUNT_EMAILS = { znisback:"znisback@znisback.app", lnisback:"lnisback@znisback.app" };
 /* A cada atualização: mude APP_VERSION/APP_BUILD aqui e em version.json, e adicione uma entrada no TOPO do CHANGELOG. */
-const APP_VERSION = "1.2.0", APP_BUILD = 3, MAX_UPLOAD_MB = 50;
+const APP_VERSION = "1.2.1", APP_BUILD = 4, MAX_UPLOAD_MB = 50;
 const TAGS = { fix:"🐞 Correção", new:"✨ Novidade", imp:"⚡ Melhoria", sec:"🔒 Segurança" };
 const CHANGELOG = [
+ {v:"1.2.1", date:"26 NOV 2026", title:"Fotos dos perfis na tela de entrada", items:[
+  ["new","Os botões znisback (ZB) e lnisback (LB) agora mostram a foto de perfil escolhida por cada conta, inclusive antes de entrar."],
+  ["imp","As fotos dos dois perfis são carregadas por uma função que retorna somente nome e foto, sem expor outros dados das contas."],
+  ["fix","Depois de trocar ou remover uma foto, os botões de entrada e a identificação do usuário são atualizados."]
+ ]},
  {v:"1.2.0", date:"26 NOV 2026", title:"Foto de perfil e player de áudio", items:[
   ["new","Foto de perfil: troque ou remova na aba Início (ou toque no seu avatar no topo). Ela aparece no topo e no chat."],
   ["new","Player de áudio no site: botão ▶ nos arquivos de áudio, com play/pause, barra de tempo e controles na tela de bloqueio."],
@@ -152,7 +157,7 @@ async function enterApp(){const {data,error}=await db.from("profiles").select("u
  $("currentUser").textContent=username;$("welcome").textContent="Olá, "+username+".";renderUpdt();renderProfile();switchView("home");await refreshAll();subscribeRealtime();checkUpdate();return true}
 function showLogin(){closePlayer();session=null;username=null;otherId=null;filesCache=[];avatars={};channels.forEach(c=>db&&db.removeChannel(c));channels=[];
  ["fileList","recentFiles","chatMessages"].forEach(i=>$(i).innerHTML='<div class="empty">Carregando…</div>');["fileCount","sharedCount","messageCount"].forEach(i=>$(i).textContent="—");
- $("dashboard").classList.add("hidden");$("footer").classList.add("hidden");$("copyright").classList.add("hidden");$("loginScreen").classList.remove("hidden");resetLogin()}
+ $("dashboard").classList.add("hidden");$("footer").classList.add("hidden");$("copyright").classList.add("hidden");$("loginScreen").classList.remove("hidden");resetLogin();renderLoginAvatars();loadLoginAvatars()}
 async function logout(){showLogin();if(db)await db.auth.signOut({scope:"local"})}
 
 /* ---------- Navegação ---------- */
@@ -213,14 +218,16 @@ $("chatForm").addEventListener("submit",async e=>{e.preventDefault();const input
 
 /* ---------- Perfil (foto) ---------- */
 const okAvatar=a=>typeof a==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(a);
-function avatarHTML(name,cls=""){const src=avatars[name];return src?`<img class="avatar ${cls}" src="${src}" alt="${esc(name)}">`:`<span class="avatar ${cls}">${esc((name||"?")[0].toUpperCase())}</span>`}
-function renderProfile(){if(!username)return;$("chipAvatar").innerHTML=avatarHTML(username,"chip");$("profileAvatar").innerHTML=avatarHTML(username,"big");$("profileName").textContent=username;$("avatarRemove").classList.toggle("hidden",!avatars[username])}
+function avatarHTML(name,cls=""){const src=avatars[name];const fallback=name==="znisback"?"ZB":name==="lnisback"?"LB":(name||"?")[0].toUpperCase();return src?`<img class="avatar ${cls}" src="${src}" alt="Foto de ${esc(name)}">`:`<span class="avatar ${cls}">${esc(fallback)}</span>`}
+function renderLoginAvatars(){if($("loginAvatarZ"))$("loginAvatarZ").innerHTML=avatarHTML("znisback","login-avatar");if($("loginAvatarL"))$("loginAvatarL").innerHTML=avatarHTML("lnisback","login-avatar")}
+async function loadLoginAvatars(){if(!db)return;try{const {data,error}=await db.rpc("get_login_avatars");if(error)throw error;avatars={};(data||[]).forEach(p=>{if(okAvatar(p.avatar))avatars[p.username]=p.avatar});renderLoginAvatars()}catch(err){console.warn("Não foi possível carregar as fotos na entrada:",err.message||err);renderLoginAvatars()}}
+function renderProfile(){renderLoginAvatars();if(!username)return;$("chipAvatar").innerHTML=avatarHTML(username,"chip");$("profileAvatar").innerHTML=avatarHTML(username,"big");$("profileName").textContent=username;$("avatarRemove").classList.toggle("hidden",!avatars[username])}
 async function loadProfiles(){if(!session)return;const {data,error}=await db.from("profiles").select("username,avatar");if(error||!session)return;avatars={};(data||[]).forEach(p=>{if(okAvatar(p.avatar))avatars[p.username]=p.avatar});renderProfile()}
 function pickAvatar(){$("avatarInput").click()}
 function imageToAvatar(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
  img.onload=()=>{try{const w=img.naturalWidth,h=img.naturalHeight,m=Math.min(w,h),c=document.createElement("canvas");c.width=c.height=256;const x=c.getContext("2d");x.fillStyle="#11111b";x.fillRect(0,0,256,256);x.drawImage(img,(w-m)/2,(h-m)/2,m,m,0,0,256,256);res(c.toDataURL("image/jpeg",.85))}catch(e){rej(e)}finally{URL.revokeObjectURL(url)}};
  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("imagem inválida"))};img.src=url})}
-async function saveAvatar(value){const {data,error}=await db.from("profiles").update({avatar:value}).eq("id",session.user.id).select("id");if(error||!data?.length)throw error||new Error("sem permissão");if(value)avatars[username]=value;else delete avatars[username];renderProfile();loadMessages()}
+async function saveAvatar(value){const {data,error}=await db.from("profiles").update({avatar:value}).eq("id",session.user.id).select("id");if(error||!data?.length)throw error||new Error("sem permissão");if(value)avatars[username]=value;else delete avatars[username];renderProfile();loadMessages();renderLoginAvatars()}
 $("avatarInput").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||!session)return;
  try{await saveAvatar(await imageToAvatar(f));toast("Foto de perfil atualizada.")}
  catch(err){toast(err.message==="imagem inválida"?"Formato de imagem não suportado. Use JPG ou PNG.":"Não foi possível salvar a foto. Rode o SQL novo no Supabase.")}});
@@ -255,6 +262,7 @@ function subscribeRealtime(){channels.forEach(c=>db.removeChannel(c));channels=[
 /* ---------- Início ---------- */
 async function init(){try{if(!configured()||!window.supabase)return;
  db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{detectSessionInUrl:false}});
+ await loadLoginAvatars();
  db.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"&&session)showLogin()});
  const {data}=await db.auth.getSession();if(data.session){session=data.session;await enterApp()}}
  catch(e){console.error(e)}
