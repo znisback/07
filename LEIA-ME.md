@@ -13,8 +13,8 @@
    - `znisback@znisback.app` — use a senha do znisback informada pelo proprietário.
    - `lnisback@znisback.app` — use a senha do lnisback informada pelo proprietário.
    Desative a confirmação de e-mail para essas contas internas, se o painel solicitar.
-4. Abra **SQL Editor > New query**, cole todo o conteúdo de `supabase_setup.sql` e execute.
-5. Em **Storage**, crie um bucket chamado `studio-files` e deixe **Public bucket desativado**.
+4. Abra **SQL Editor > New query**, cole todo o conteúdo de `supabase_setup.sql` e execute. Já rodou antes? Rode a versão nova de novo: é seguro repetir (liga o Realtime dos arquivos e reforça a segurança).
+5. O bucket privado `studio-files` é criado pelo SQL. Confira em **Storage** que **Public** está desativado.
 6. Em **Project Settings > API**, copie o Project URL e a chave `anon`/`publishable` (nunca use `service_role` no site).
 
 ## 2. Conectar o HTML
@@ -36,7 +36,10 @@
 - Arquivos são guardados no Storage privado do Supabase, não no GitHub nem apenas no celular.
 - Depois do upload, o dono pode compartilhar com o outro usuário. O arquivo só aparece para o destinatário depois do compartilhamento.
 - O chat é compartilhado entre as duas contas.
-- A aba UPDT mantém o histórico de atualizações.
+- A aba UPDT mantém o histórico de atualizações, por versão e com etiquetas (correção, novidade, melhoria, segurança).
+- Limite de 50 MB por arquivo no plano gratuito do Supabase (o site avisa antes de enviar).
+- Foto de perfil: toque no seu avatar no topo ou em **Trocar foto** na aba Início. Exige rodar o `supabase_setup.sql` novo.
+- Player: o botão ▶ nos arquivos de áudio toca direto no site (mp3, wav, m4a, flac, ogg…; o suporte a cada formato depende do navegador). No iPhone, às vezes é preciso tocar no ▶ do player.
 
 ## Segurança importante
 - O HTML contém apenas a chave pública `anon`/`publishable`, protegida pelas políticas RLS do SQL. Nunca cole uma chave `service_role` no HTML.
@@ -46,4 +49,7 @@
 - GitHub Pages é hospedagem estática; Supabase é necessário para login, arquivos e chat sincronizados entre aparelhos.
 
 ## Atualizações
-Ao publicar uma nova versão, substitua `index.html` e atualize `version.json`. Registre as novidades, correções e melhorias na aba UPDT.
+Ao publicar uma nova versão:
+1. No `index.html`, mude `APP_VERSION` e `APP_BUILD` e adicione uma entrada no topo de `CHANGELOG` (`fix` correção, `new` novidade, `imp` melhoria, `sec` segurança).
+2. Em `version.json`, mude `version`, `build`, `updated_at` e `notes` com os mesmos valores.
+3. Envie os dois arquivos ao GitHub. Quem estiver com o site aberto verá o aviso de nova versão.
