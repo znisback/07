@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ZnisBack">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
 <style>
 :root{--bg:#09090f;--panel:#11111b;--panel2:#171725;--line:rgba(255,255,255,.09);--muted:#88889d;--text:#f5f4fb;--purple:#9b7bff;--pink:#e78bff;--green:#65e6b2;--danger:#ff7287;--radius:22px}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#241743 0,transparent 35%),radial-gradient(ellipse at 100% 70%,#171c38 0,transparent 32%),var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;min-height:100dvh}button,input,textarea{font:inherit}button{cursor:pointer;color:inherit}.hidden{display:none!important}
@@ -85,9 +85,21 @@ const SUPABASE_URL = "https://dpvawnoyzgwokpnaesol.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_hWS-SsuaNRczKV9QQqUDlA_WGzaTBt0";
 const ACCOUNT_EMAILS = { znisback:"znisback@znisback.app", lnisback:"lnisback@znisback.app" };
 /* A cada atualização: mude APP_VERSION/APP_BUILD aqui e em version.json, e adicione uma entrada no TOPO do CHANGELOG. */
-const APP_VERSION = "1.2.1", APP_BUILD = 4, MAX_UPLOAD_MB = 50;
+const APP_VERSION = "1.3.0", APP_BUILD = 5, MAX_UPLOAD_MB = 50;
 const TAGS = { fix:"🐞 Correção", new:"✨ Novidade", imp:"⚡ Melhoria", sec:"🔒 Segurança" };
 const CHANGELOG = [
+ {v:"1.3.0", date:"27 NOV 2026", title:"Confiabilidade, chat, player e segurança", items:[
+  ["sec","Compartilhamento agora só atualiza o campo shared_with; SQL de atualização restrita incluído no pacote."],
+  ["fix","Compartilhar e excluir verificam se o banco realmente alterou o registro antes de confirmar."],
+  ["fix","Chat recarrega mensagens ao voltar do segundo plano ou recuperar a conexão."],
+  ["fix","Player evita trocar para uma faixa antiga quando dois áudios são selecionados rapidamente."],
+  ["fix","Barra de reprodução não perde o estado ao arrastar e duração inválida não permite seek."],
+  ["fix","MIME de áudio é identificado pela extensão quando o navegador não informa o tipo."],
+  ["fix","Erros de login automático e de inicialização passam a gerar aviso visível."],
+  ["imp","Avatares do chat usam URLs locais em vez de repetir grandes strings base64 em cada mensagem."],
+  ["imp","Seleção de arquivos durante um envio informa que o envio atual precisa terminar primeiro."],
+  ["imp","CDN do Supabase fixada em uma versão específica para evitar atualizações inesperadas." ]
+ ]},
  {v:"1.2.1", date:"26 NOV 2026", title:"Fotos dos perfis na tela de entrada", items:[
   ["new","Os botões znisback (ZB) e lnisback (LB) agora mostram a foto de perfil escolhida por cada conta, inclusive antes de entrar."],
   ["imp","As fotos dos dois perfis são carregadas por uma função que retorna somente nome e foto, sem expor outros dados das contas."],
@@ -126,7 +138,7 @@ const CHANGELOG = [
   ["new","Login individual, biblioteca de arquivos, compartilhamento privado e chat entre znisback e lnisback."]
  ]}
 ];
-let db=null, session=null, username=null, activeView="home", channels=[], filesCache=[], otherId=null, uploading=false, toastT=null, msgSeq=0, fileSeq=0, avatars={}, playingId=null, seeking=false, seekT=null;
+let db=null, session=null, username=null, activeView="home", channels=[], filesCache=[], otherId=null, uploading=false, toastT=null, msgSeq=0, fileSeq=0, avatars={}, avatarBlobUrls={}, playingId=null, playSeq=0, seeking=false, seekT=null;
 const $=id=>document.getElementById(id);
 function debounce(fn,ms=250){let h;return(...a)=>{clearTimeout(h);h=setTimeout(()=>fn(...a),ms)}}
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2800)}
@@ -155,7 +167,7 @@ async function enterApp(){const {data,error}=await db.from("profiles").select("u
  if(username&&data.username!==username){session=null;await db.auth.signOut({scope:"local"});$("loginError").textContent="Esta conta não está autorizada neste estúdio.";return false}
  username=data.username;$("loginScreen").classList.add("hidden");$("dashboard").classList.remove("hidden");$("footer").classList.remove("hidden");$("copyright").classList.remove("hidden");
  $("currentUser").textContent=username;$("welcome").textContent="Olá, "+username+".";renderUpdt();renderProfile();switchView("home");await refreshAll();subscribeRealtime();checkUpdate();return true}
-function showLogin(){closePlayer();session=null;username=null;otherId=null;filesCache=[];avatars={};channels.forEach(c=>db&&db.removeChannel(c));channels=[];
+function showLogin(){closePlayer();session=null;username=null;otherId=null;filesCache=[];avatars={};refreshAvatarBlobUrls();channels.forEach(c=>db&&db.removeChannel(c));channels=[];
  ["fileList","recentFiles","chatMessages"].forEach(i=>$(i).innerHTML='<div class="empty">Carregando…</div>');["fileCount","sharedCount","messageCount"].forEach(i=>$(i).textContent="—");
  $("dashboard").classList.add("hidden");$("footer").classList.add("hidden");$("copyright").classList.add("hidden");$("loginScreen").classList.remove("hidden");resetLogin();renderLoginAvatars();loadLoginAvatars()}
 async function logout(){showLogin();if(db)await db.auth.signOut({scope:"local"})}
@@ -176,13 +188,14 @@ function fileMarkup(f,actions=true){const mine=f.owner_id===session.user.id,shar
  const play=isAudio(f)?`<button class="icon-btn play-row" title="Ouvir" aria-label="Ouvir" onclick="playFile('${f.id}')">${on&&!audio.paused?"❚❚":"▶"}</button>`:"";
  const own=mine?`<button class="icon-btn" title="${shared?"Remover compartilhamento":"Compartilhar"}" aria-label="${shared?"Remover compartilhamento":"Compartilhar"}" onclick="shareFile('${f.id}')">${shared?"↗":"⇧"}</button><button class="icon-btn" title="Excluir" aria-label="Excluir" onclick="deleteFile('${f.id}')">×</button>`:"";
  return `<div class="file-row${on?" playing":""}" data-id="${f.id}"><div class="file-icon">${fileIcon(f.file_name)}</div><div class="file-info"><b>${esc(f.file_name)}</b><small>${formatSize(f.file_size)} · ${mine?"Enviado por você":"De "+esc(f.owner_name)} · ${shared?"Compartilhado":"Privado"}</small></div>${actions?`<div class="file-actions">${play}<button class="icon-btn" title="Baixar" aria-label="Baixar" onclick="downloadFile('${f.id}')">↓</button>${own}</div>`:""}</div>`}
-async function uploadFiles(list){if(!list.length||uploading||!session)return;uploading=true;const status=$("uploadStatus");let ok=0,fail=0;
+async function uploadFiles(list){if(!list.length||!session)return;if(uploading){toast("Um envio já está em andamento. Aguarde terminar para selecionar mais arquivos.");return}uploading=true;const status=$("uploadStatus");let ok=0,fail=0;
  for(const file of list){
   if(file.size>MAX_UPLOAD_MB*1048576){fail++;toast(file.name+" passa de "+MAX_UPLOAD_MB+" MB (limite do plano gratuito).");continue}
   status.textContent="Enviando "+file.name+"… ("+(ok+fail+1)+"/"+list.length+")";
   try{const path=session.user.id+"/"+uid()+"-"+file.name.replace(/[^\w.\-() ]/g,"_");
-   const {error:upErr}=await db.storage.from("studio-files").upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream"});if(upErr)throw upErr;
-   const {error:rowErr}=await db.from("shared_files").insert({owner_id:session.user.id,owner_name:username,file_name:file.name,file_size:file.size,storage_path:path,mime_type:file.type||"application/octet-stream"});
+   const ext=(file.name.split(".").pop()||"").toLowerCase(),mimeByExt={mp3:"audio/mpeg",wav:"audio/wav",flac:"audio/flac",m4a:"audio/mp4",aac:"audio/aac",ogg:"audio/ogg",opus:"audio/ogg",aif:"audio/aiff",aiff:"audio/aiff"};const detectedMime=file.type||mimeByExt[ext]||"application/octet-stream";
+   const {error:upErr}=await db.storage.from("studio-files").upload(path,file,{upsert:false,contentType:detectedMime});if(upErr)throw upErr;
+   const {error:rowErr}=await db.from("shared_files").insert({owner_id:session.user.id,owner_name:username,file_name:file.name,file_size:file.size,storage_path:path,mime_type:detectedMime});
    if(rowErr){await db.storage.from("studio-files").remove([path]);throw rowErr}ok++}
   catch(err){fail++;toast("Falha ao enviar "+file.name+": "+(err.message||err))}
  }
@@ -195,15 +208,14 @@ zone.addEventListener("dragover",()=>zone.classList.add("drag"));
 zone.addEventListener("drop",e=>{if(hasFiles(e))uploadFiles([...e.dataTransfer.files])});
 async function downloadFile(id){const f=filesCache.find(x=>x.id===id);if(!f)return;const {data,error}=await db.storage.from("studio-files").createSignedUrl(f.storage_path,300,{download:f.file_name});if(error||!data){toast("Não foi possível baixar o arquivo.");return}location.href=data.signedUrl}
 async function getUserId(name){const {data,error}=await db.from("profiles").select("id").eq("username",name).single();if(error)throw error;return data.id}
-async function shareFile(id){const f=filesCache.find(x=>x.id===id);if(!f)return;const other=username==="znisback"?"lnisback":"znisback";
- try{if(f.shared_with){if(!confirm("Remover o compartilhamento deste arquivo?"))return;const {error}=await db.from("shared_files").update({shared_with:null}).eq("id",id);if(error)throw error;toast("Compartilhamento removido.")}
-  else{if(!confirm('Compartilhar "'+f.file_name+'" com '+other+"?"))return;otherId=otherId||await getUserId(other);const {error}=await db.from("shared_files").update({shared_with:otherId}).eq("id",id);if(error)throw error;toast("Arquivo compartilhado com "+other+".")}
-  await loadFiles()}
- catch(err){toast("Não foi possível atualizar o compartilhamento. Confira as políticas do banco.")}}
-async function deleteFile(id){const f=filesCache.find(x=>x.id===id);if(!f||!confirm("Excluir "+f.file_name+" permanentemente?"))return;
- try{const {error}=await db.storage.from("studio-files").remove([f.storage_path]);if(error)throw error;const {error:e2}=await db.from("shared_files").delete().eq("id",id);toast(e2?"Arquivo removido do armazenamento, mas houve erro no registro.":"Arquivo excluído.")}
- catch(err){toast("Falha ao excluir o arquivo.")}
- await loadFiles()}
+async function shareFile(id){const f=filesCache.find(x=>x.id===id);if(!f||f.owner_id!==session?.user?.id)return;const other=username==="znisback"?"lnisback":"znisback";
+ try{let target=null;if(f.shared_with){if(!confirm("Remover o compartilhamento deste arquivo?"))return;target=null}else{if(!confirm('Compartilhar "'+f.file_name+'" com '+other+"?"))return;target=await getUserId(other)}
+  const {data,error}=await db.from("shared_files").update({shared_with:target}).eq("id",id).eq("owner_id",session.user.id).select("id,shared_with");if(error)throw error;if(!data?.length)throw new Error("Nenhum registro foi atualizado pelas permissões do banco.");toast(target?"Arquivo compartilhado com "+other+".":"Compartilhamento removido.");await loadFiles()}
+ catch(err){console.error("shareFile",err);toast("Não foi possível alterar o compartilhamento: "+(err.message||"verifique as permissões SQL."))}}
+async function deleteFile(id){const f=filesCache.find(x=>x.id===id);if(!f||f.owner_id!==session?.user?.id||!confirm("Excluir "+f.file_name+" permanentemente?"))return;
+ try{const {data:rows,error:e1}=await db.from("shared_files").delete().eq("id",id).eq("owner_id",session.user.id).select("id,storage_path");if(e1)throw e1;if(!rows?.length)throw new Error("O banco não confirmou a exclusão; arquivo mantido no armazenamento.");
+  const {error:e2}=await db.storage.from("studio-files").remove([rows[0].storage_path]);if(e2){toast("Registro removido, mas o arquivo no armazenamento precisa de limpeza: "+e2.message)}else toast("Arquivo excluído.")}
+ catch(err){console.error("deleteFile",err);toast("Falha ao excluir: "+(err.message||"verifique as permissões."))}await loadFiles()}
 
 /* ---------- Chat ---------- */
 async function loadMessages(force){if(!session)return;const my=++msgSeq;const {data,error,count}=await db.from("messages").select("*",{count:"exact"}).order("created_at",{ascending:false}).limit(200);if(!session||my!==msgSeq)return;
@@ -218,16 +230,17 @@ $("chatForm").addEventListener("submit",async e=>{e.preventDefault();const input
 
 /* ---------- Perfil (foto) ---------- */
 const okAvatar=a=>typeof a==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(a);
-function avatarHTML(name,cls=""){const src=avatars[name];const fallback=name==="znisback"?"ZB":name==="lnisback"?"LB":(name||"?")[0].toUpperCase();return src?`<img class="avatar ${cls}" src="${src}" alt="Foto de ${esc(name)}">`:`<span class="avatar ${cls}">${esc(fallback)}</span>`}
+function avatarHTML(name,cls=""){const src=avatarBlobUrls[name]||avatars[name];const fallback=name==="znisback"?"ZB":name==="lnisback"?"LB":(name||"?")[0].toUpperCase();return src?`<img class="avatar ${cls}" src="${src}" alt="Foto de ${esc(name)}">`:`<span class="avatar ${cls}">${esc(fallback)}</span>`}
 function renderLoginAvatars(){if($("loginAvatarZ"))$("loginAvatarZ").innerHTML=avatarHTML("znisback","login-avatar");if($("loginAvatarL"))$("loginAvatarL").innerHTML=avatarHTML("lnisback","login-avatar")}
 async function loadLoginAvatars(){if(!db)return;try{const {data,error}=await db.rpc("get_login_avatars");if(error)throw error;avatars={};(data||[]).forEach(p=>{if(okAvatar(p.avatar))avatars[p.username]=p.avatar});renderLoginAvatars()}catch(err){console.warn("Não foi possível carregar as fotos na entrada:",err.message||err);renderLoginAvatars()}}
+function refreshAvatarBlobUrls(){Object.keys(avatarBlobUrls).forEach(k=>URL.revokeObjectURL(avatarBlobUrls[k]));avatarBlobUrls={};Object.entries(avatars).forEach(([k,v])=>{try{const b64=v.split(",")[1],raw=atob(b64),a=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i);avatarBlobUrls[k]=URL.createObjectURL(new Blob([a],{type:"image/jpeg"}))}catch(e){}})}
 function renderProfile(){renderLoginAvatars();if(!username)return;$("chipAvatar").innerHTML=avatarHTML(username,"chip");$("profileAvatar").innerHTML=avatarHTML(username,"big");$("profileName").textContent=username;$("avatarRemove").classList.toggle("hidden",!avatars[username])}
-async function loadProfiles(){if(!session)return;const {data,error}=await db.from("profiles").select("username,avatar");if(error||!session)return;avatars={};(data||[]).forEach(p=>{if(okAvatar(p.avatar))avatars[p.username]=p.avatar});renderProfile()}
+async function loadProfiles(){if(!session)return;const {data,error}=await db.from("profiles").select("username,avatar");if(error||!session)return;avatars={};(data||[]).forEach(p=>{if(okAvatar(p.avatar))avatars[p.username]=p.avatar});refreshAvatarBlobUrls();renderProfile()}
 function pickAvatar(){$("avatarInput").click()}
 function imageToAvatar(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
  img.onload=()=>{try{const w=img.naturalWidth,h=img.naturalHeight,m=Math.min(w,h),c=document.createElement("canvas");c.width=c.height=256;const x=c.getContext("2d");x.fillStyle="#11111b";x.fillRect(0,0,256,256);x.drawImage(img,(w-m)/2,(h-m)/2,m,m,0,0,256,256);res(c.toDataURL("image/jpeg",.85))}catch(e){rej(e)}finally{URL.revokeObjectURL(url)}};
  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("imagem inválida"))};img.src=url})}
-async function saveAvatar(value){const {data,error}=await db.from("profiles").update({avatar:value}).eq("id",session.user.id).select("id");if(error||!data?.length)throw error||new Error("sem permissão");if(value)avatars[username]=value;else delete avatars[username];renderProfile();loadMessages();renderLoginAvatars()}
+async function saveAvatar(value){const {data,error}=await db.from("profiles").update({avatar:value}).eq("id",session.user.id).select("id");if(error||!data?.length)throw error||new Error("sem permissão");if(value)avatars[username]=value;else delete avatars[username];refreshAvatarBlobUrls();renderProfile();loadMessages();renderLoginAvatars()}
 $("avatarInput").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||!session)return;
  try{await saveAvatar(await imageToAvatar(f));toast("Foto de perfil atualizada.")}
  catch(err){toast(err.message==="imagem inválida"?"Formato de imagem não suportado. Use JPG ou PNG.":"Não foi possível salvar a foto. Rode o SQL novo no Supabase.")}});
@@ -239,18 +252,18 @@ const isAudio=f=>(f.mime_type||"").startsWith("audio/")||AUDIO_EXT.includes((f.f
 const audio=$("audio"),fmtT=t=>{if(!isFinite(t))return"0:00";t=Math.floor(t);return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
 function highlight(){document.querySelectorAll(".file-row[data-id]").forEach(r=>{const on=r.dataset.id===playingId;r.classList.toggle("playing",on);const b=r.querySelector(".play-row");if(b)b.textContent=on&&!audio.paused?"❚❚":"▶"})}
 function syncPlayer(){$("playBtn").textContent=audio.paused?"▶":"❚❚";highlight()}
-function tick(){if(!seeking&&audio.duration)$("seek").value=Math.round(audio.currentTime/audio.duration*1000);$("playerTime").textContent=fmtT(audio.currentTime)+" / "+fmtT(audio.duration)}
-async function playFile(id){const f=filesCache.find(x=>x.id===id);if(!f)return;
+function tick(){if(!seeking&&Number.isFinite(audio.duration)&&audio.duration>0)$("seek").value=Math.round(audio.currentTime/audio.duration*1000);$("playerTime").textContent=fmtT(audio.currentTime)+" / "+fmtT(audio.duration)}
+async function playFile(id){const f=filesCache.find(x=>x.id===id);if(!f)return;const seq=++playSeq;
  if(playingId===id){audio.paused?audio.play().catch(()=>{}):audio.pause();return}
- const {data,error}=await db.storage.from("studio-files").createSignedUrl(f.storage_path,3600);if(error||!data){toast("Não foi possível abrir o áudio.");return}
- playingId=id;audio.src=data.signedUrl;$("playerTitle").textContent=f.file_name;$("playerSub").textContent=f.owner_id===session.user.id?"Seu arquivo":"De "+f.owner_name;$("seek").value=0;$("player").classList.remove("hidden");document.body.classList.add("has-player");highlight();
+ const {data,error}=await db.storage.from("studio-files").createSignedUrl(f.storage_path,3600);if(seq!==playSeq)return;if(error||!data){toast("Não foi possível abrir o áudio.");return}
+ playingId=id;audio.pause();audio.src=data.signedUrl;$("playerTitle").textContent=f.file_name;$("playerSub").textContent=f.owner_id===session.user.id?"Seu arquivo":"De "+f.owner_name;$("seek").value=0;$("player").classList.remove("hidden");document.body.classList.add("has-player");highlight();
  try{if("mediaSession" in navigator){const art=avatars[f.owner_name];navigator.mediaSession.metadata=new MediaMetadata({title:f.file_name,artist:f.owner_name,album:"ZnisBack Studio",artwork:art?[{src:art,sizes:"256x256",type:"image/jpeg"}]:[]})}}catch(e){}
  try{await audio.play()}catch(e){}}
-function closePlayer(){playingId=null;audio.pause();audio.removeAttribute("src");audio.load();$("player").classList.add("hidden");document.body.classList.remove("has-player");$("seek").value=0;$("playerTime").textContent="0:00";$("playBtn").textContent="▶";highlight()}
+function closePlayer(){playSeq++;playingId=null;audio.pause();audio.removeAttribute("src");audio.load();$("player").classList.add("hidden");document.body.classList.remove("has-player");$("seek").value=0;$("playerTime").textContent="0:00";$("playBtn").textContent="▶";highlight()}
 ["timeupdate","loadedmetadata"].forEach(ev=>audio.addEventListener(ev,tick));["play","pause","ended"].forEach(ev=>audio.addEventListener(ev,syncPlayer));
 audio.addEventListener("error",()=>{if(playingId)toast("Não foi possível tocar este áudio. Tente baixar o arquivo.")});
 $("playBtn").addEventListener("click",()=>audio.paused?audio.play().catch(()=>{}):audio.pause());
-$("seek").addEventListener("input",e=>{seeking=true;clearTimeout(seekT);seekT=setTimeout(()=>seeking=false,500);if(audio.duration)audio.currentTime=e.target.value/1000*audio.duration});
+$("seek").addEventListener("input",e=>{seeking=true;clearTimeout(seekT);seekT=setTimeout(()=>seeking=false,500);if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=e.target.value/1000*audio.duration});
 
 /* ---------- Tempo real ---------- */
 const refreshMessages=debounce(()=>loadMessages()),refreshFiles=debounce(()=>loadFiles()),refreshProfiles=debounce(async()=>{await loadProfiles();loadMessages()});
@@ -258,14 +271,16 @@ function subscribeRealtime(){channels.forEach(c=>db.removeChannel(c));channels=[
  const sub=(table,ev,fn)=>channels.push(db.channel("studio-"+table).on("postgres_changes",{event:ev,schema:"public",table},fn).subscribe());
  sub("messages","*",p=>{if(p.eventType==="INSERT"&&p.new?.sender_id===session?.user.id)return;refreshMessages()});
  sub("shared_files","*",()=>refreshFiles());sub("profiles","UPDATE",()=>refreshProfiles())}
+window.addEventListener("online",()=>{if(session){loadMessages(true);loadFiles();loadProfiles()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&session){loadMessages(true);loadFiles()}});
 
 /* ---------- Início ---------- */
-async function init(){try{if(!configured()||!window.supabase)return;
+async function init(){try{if(!configured()||!window.supabase){toast("Não foi possível iniciar o estúdio. Verifique a configuração do Supabase e a conexão.");return}
  db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{detectSessionInUrl:false}});
- await loadLoginAvatars();
+ loadLoginAvatars();
  db.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"&&session)showLogin()});
  const {data}=await db.auth.getSession();if(data.session){session=data.session;await enterApp()}}
- catch(e){console.error(e)}
+ catch(e){console.error(e);toast("Falha ao iniciar o estúdio. Verifique a internet e recarregue a página.")}
  finally{document.body.classList.remove("booting")}}
 init();
 </script>
