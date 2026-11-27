@@ -1,12 +1,11 @@
 {
   "name": "ZnisBack Studio",
-  "version": "1.2.0",
-  "build": 3,
+  "version": "1.2.1",
+  "build": 4,
   "updated_at": "2026-11-26",
   "notes": [
-    "Foto de perfil (topo, aba Início e chat)",
-    "Player de áudio no site com controles na tela de bloqueio",
-    "Realtime com um canal por tabela",
-    "SQL: coluna avatar com permissão só na própria conta"
+    "Os botões znisback (ZB) e lnisback (LB) mostram a foto de perfil de cada conta na tela de entrada.",
+    "Fotos carregadas por função Supabase que retorna somente nome de usuário e avatar.",
+    "Atualização dos avatares após troca ou remoção da foto."
   ]
 }
