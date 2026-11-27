@@ -1,11 +1,14 @@
 {
   "name": "ZnisBack Studio",
-  "version": "1.2.1",
-  "build": 4,
-  "updated_at": "2026-11-26",
+  "version": "1.3.0",
+  "build": 5,
+  "updated_at": "2026-11-27",
   "notes": [
-    "Os botões znisback (ZB) e lnisback (LB) mostram a foto de perfil de cada conta na tela de entrada.",
-    "Fotos carregadas por função Supabase que retorna somente nome de usuário e avatar.",
-    "Atualização dos avatares após troca ou remoção da foto."
+    "Correção de compartilhamento e exclusão com confirmação real das alterações no banco.",
+    "Chat recarrega ao retornar do segundo plano ou recuperar a conexão.",
+    "Player mais resistente a toques rápidos, duração inválida e tipos MIME ausentes.",
+    "Avatares do chat otimizados com URLs locais.",
+    "Inicialização e seleção de arquivos com avisos mais claros.",
+    "SQL complementar restringe atualizações de arquivos e adiciona suporte seguro às fotos de perfil e avatares de login."
   ]
 }
