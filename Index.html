@@ -103,70 +103,23 @@ body.has-player #dashboard{padding-bottom:calc(190px + env(safe-area-inset-botto
 <div id="player" class="player hidden"><div class="player-info"><b id="playerTitle"></b><small id="playerSub"></small></div><div class="player-ctl"><button id="playBtn" class="play-main" aria-label="Tocar ou pausar">▶</button><input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Posição da faixa"><span id="playerTime" class="muted">0:00</span><button class="icon-btn" aria-label="Fechar player" title="Fechar" onclick="closePlayer()">×</button></div><audio id="audio" preload="metadata"></audio></div>
 <div id="toast" class="toast"></div>
 <script>
-/* Configure estas duas informações após criar seu projeto Supabase. */
 const SUPABASE_URL = "https://dpvawnoyzgwokpnaesol.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_hWS-SsuaNRczKV9QQqUDlA_WGzaTBt0";
 const ACCOUNT_EMAILS = { znisback:"znisback@znisback.app", lnisback:"lnisback@znisback.app" };
-/* A cada atualização: mude APP_VERSION/APP_BUILD aqui e em version.json, e adicione uma entrada no TOPO do CHANGELOG. */
-const APP_VERSION = "1.4.0", APP_BUILD = 6, MAX_UPLOAD_MB = 50;
+const APP_VERSION = "1.4.1", APP_BUILD = 7, MAX_UPLOAD_MB = 50;
 const TAGS = { fix:"🐞 Correção", new:"✨ Novidade", imp:"⚡ Melhoria", sec:"🔒 Segurança" };
 const CHANGELOG = [
+ {v:"1.4.1", date:"27 NOV 2026", title:"Correção do modelo da IA", items:[
+  ["fix","Atualização para o modelo llama-3.1 que está ativo na Groq."]
+ ]},
  {v:"1.4.0", date:"27 NOV 2026", title:"IA segura e funcionando", items:[
-  ["sec","Chave do Groq não fica mais no HTML. A IA é chamada por uma Supabase Edge Function que guarda a chave no servidor."],
+  ["sec","Chave do Groq não fica mais no HTML. A IA é chamada por uma Supabase Edge Function."],
   ["fix","Continuação de letra agora funciona de forma consistente e sem erro de CORS."],
-  ["fix","Erros da IA aparecem com mensagem clara (sessão, limite, texto longo)."],
-  ["imp","Limite de 4000 caracteres na entrada para evitar respostas cortadas."],
-  ["imp","Botão fica desabilitado e mostra 'Gerando…' durante a chamada."],
-  ["fix","version.json sincronizado com o APP_BUILD do index.html."]
+  ["imp","Limite de 4000 caracteres na entrada para evitar respostas cortadas."]
  ]},
  {v:"1.3.0", date:"27 NOV 2026", title:"Confiabilidade, chat, player e segurança", items:[
-  ["sec","Compartilhamento agora só atualiza o campo shared_with; SQL de atualização restrita incluído no pacote."],
-  ["fix","Compartilhar e excluir verificam se o banco realmente alterou o registro antes de confirmar."],
   ["fix","Chat recarrega mensagens ao voltar do segundo plano ou recuperar a conexão."],
-  ["fix","Player evita trocar para uma faixa antiga quando dois áudios são selecionados rapidamente."],
-  ["fix","Barra de reprodução não perde o estado ao arrastar e duração inválida não permite seek."],
-  ["fix","MIME de áudio é identificado pela extensão quando o navegador não informa o tipo."],
-  ["fix","Erros de login automático e de inicialização passam a gerar aviso visível."],
-  ["imp","Avatares do chat usam URLs locais em vez de repetir grandes strings base64 em cada mensagem."],
-  ["imp","Seleção de arquivos durante um envio informa que o envio atual precisa terminar primeiro."],
-  ["imp","CDN do Supabase fixada em uma versão específica para evitar atualizações inesperadas." ]
- ]},
- {v:"1.2.1", date:"26 NOV 2026", title:"Fotos dos perfis na tela de entrada", items:[
-  ["new","Os botões znisback (ZB) e lnisback (LB) agora mostram a foto de perfil escolhida por cada conta, inclusive antes de entrar."],
-  ["imp","As fotos dos dois perfis são carregadas por uma função que retorna somente nome e foto, sem expor outros dados das contas."],
-  ["fix","Depois de trocar ou remover uma foto, os botões de entrada e a identificação do usuário são atualizados."]
- ]},
- {v:"1.2.0", date:"26 NOV 2026", title:"Foto de perfil e player de áudio", items:[
-  ["new","Foto de perfil: troque ou remova na aba Início (ou toque no seu avatar no topo). Ela aparece no topo e no chat."],
-  ["new","Player de áudio no site: botão ▶ nos arquivos de áudio, com play/pause, barra de tempo e controles na tela de bloqueio."],
-  ["new","O player continua tocando enquanto você troca de aba e destaca a faixa que está tocando."],
-  ["imp","A foto é cortada em quadrado e reduzida no próprio aparelho, então é leve e rápida."],
-  ["imp","Realtime mais resistente: cada tabela usa seu próprio canal, então um erro em uma não derruba o chat."],
-  ["sec","Cada conta altera só a própria foto, e o banco aceita apenas JPEG pequeno nesse campo."]
- ]},
- {v:"1.1.0", date:"26 NOV 2026", title:"Revisão completa", items:[
-  ["fix","Chat parava de mostrar mensagens novas depois de 200 no total. Agora mostra as mais recentes e o contador usa o total real."],
-  ["fix","Baixar arquivo no celular era bloqueado como pop-up. Agora baixa direto e mantém o nome original."],
-  ["fix","Escolher o mesmo arquivo de novo não funcionava, e uma falha no envio deixava a lista desatualizada."],
-  ["fix","Soltar um arquivo na área de upload abria o arquivo na aba. Agora o arrastar e soltar envia de verdade."],
-  ["fix","Ao sair, o canal em tempo real ficava aberto e dados do usuário anterior ficavam na tela. Agora tudo é limpo."],
-  ["fix","Compartilhar podia falhar sem aviso. Agora mostra o erro."],
-  ["fix","Arquivos compartilhados agora aparecem na hora para o outro usuário (Realtime ligado para arquivos)."],
-  ["fix","Celular: altura correta da tela (dvh), área segura do iPhone e desfoque no Safari antigo."],
-  ["fix","Avisos seguidos não somem mais cedo demais. Erros de login ficaram claros (senha, internet, muitas tentativas)."],
-  ["new","Aba UPDT organizada por versão, com etiquetas de correção, novidade, melhoria e segurança."],
-  ["new","Aviso automático de nova versão (lê o version.json)."],
-  ["new","Contagem do envio (1/3) e aviso do limite de 50 MB por arquivo."],
-  ["new","Ícone na aba, modo app na tela inicial e carregamento sem piscar a tela de login."],
-  ["new","Qualquer tipo de arquivo pode ser selecionado (stems, projetos de DAW, imagens, vídeos)."],
-  ["imp","Sair encerra só este aparelho, mesmo sem internet."],
-  ["imp","Gerenciador de senhas reconhece a conta correta."],
-  ["imp","SQL mais rápido (índices e auth.uid() otimizado) e seguro para rodar várias vezes."],
-  ["sec","Bucket studio-files criado e forçado como privado pelo SQL."],
-  ["sec","Só contas cadastradas enviam arquivos, o caminho do arquivo é validado e o acesso anônimo às tabelas foi revogado."]
- ]},
- {v:"1.0.0", date:"26 NOV 2026", title:"Lançamento inicial", items:[
-  ["new","Login individual, biblioteca de arquivos, compartilhamento privado e chat entre znisback e lnisback."]
+  ["imp","Avatares do chat usam URLs locais em vez de repetir grandes strings base64 em cada mensagem."]
  ]}
 ];
 let db=null, session=null, username=null, activeView="home", channels=[], filesCache=[], otherId=null, uploading=false, toastT=null, msgSeq=0, fileSeq=0, avatars={}, avatarBlobUrls={}, playingId=null, playSeq=0, seeking=false, seekT=null;
@@ -181,21 +134,20 @@ function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(
 function renderUpdt(){$("updtBadge").textContent="v"+APP_VERSION;$("updtList").innerHTML=CHANGELOG.map(c=>`<div class="updt-item"><b>Versão ${esc(c.v)} — ${esc(c.title)}</b> <span class="muted">· ${esc(c.date)}</span><ul class="updt-ul">${c.items.map(([t,x])=>`<li><span class="badge ${t}">${TAGS[t]||""}</span>${esc(x)}</li>`).join("")}</ul></div>`).join("")}
 async function checkUpdate(){try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const v=await r.json();if(v.build>APP_BUILD){toast("Nova versão disponível — recarregue a página.");$("updtBadge").textContent="v"+APP_VERSION+" · atualizar"}}catch(e){}}
 
-/* ---------- Login / sessão ---------- */
 function chooseUser(user){username=user;$("loginTitle").textContent="Entrar como "+user;$("loginEmail").value=ACCOUNT_EMAILS[user];$("loginCard").classList.remove("hidden");$("password").value="";$("loginError").textContent="";setTimeout(()=>$("password").focus(),100)}
 function resetLogin(){$("loginCard").classList.add("hidden");$("password").value="";$("loginError").textContent="";username=null}
 function authMessage(err){const m=String(err?.message||"").toLowerCase();if(err?.status===429)return"Muitas tentativas. Aguarde um minuto e tente de novo.";if(err?.status===400||m.includes("invalid login"))return"Senha incorreta. Tente de novo.";if(m.includes("fetch")||m.includes("network"))return"Sem conexão. Verifique a internet.";return"Não foi possível entrar. Tente novamente."}
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();if(!username)return;
- if(!configured()){$("loginError").textContent="O site ainda precisa ser conectado ao Supabase. Siga o arquivo LEIA-ME.";return}
- if(!db){$("loginError").textContent="Não foi possível carregar o Supabase. Verifique a internet e recarregue a página.";return}
+ if(!configured()){$("loginError").textContent="O site ainda precisa ser conectado ao Supabase.";return}
+ if(!db){$("loginError").textContent="Não foi possível carregar o Supabase. Verifique a internet.";return}
  const btn=$("loginForm").querySelector("button");btn.disabled=true;btn.textContent="Verificando…";$("loginError").textContent="";
  try{const {data,error}=await db.auth.signInWithPassword({email:ACCOUNT_EMAILS[username],password:$("password").value});if(error)throw error;session=data.session;$("password").value="";await enterApp()}
  catch(err){$("loginError").textContent=authMessage(err)}
  finally{btn.disabled=false;btn.innerHTML='Entrar no estúdio <span>↗</span>'}
 });
 async function enterApp(){const {data,error}=await db.from("profiles").select("username").eq("id",session.user.id).single();
- if(error||!data){session=null;$("loginError").textContent="Não foi possível verificar a conta. Confira a internet e o SQL.";return false}
- if(username&&data.username!==username){session=null;await db.auth.signOut({scope:"local"});$("loginError").textContent="Esta conta não está autorizada neste estúdio.";return false}
+ if(error||!data){session=null;$("loginError").textContent="Não foi possível verificar a conta.";return false}
+ if(username&&data.username!==username){session=null;await db.auth.signOut({scope:"local"});$("loginError").textContent="Esta conta não está autorizada.";return false}
  username=data.username;$("loginScreen").classList.add("hidden");$("dashboard").classList.remove("hidden");$("footer").classList.remove("hidden");$("copyright").classList.remove("hidden");
  $("currentUser").textContent=username;$("welcome").textContent="Olá, "+username+".";renderUpdt();renderProfile();switchView("home");await refreshAll();subscribeRealtime();checkUpdate();return true}
 function showLogin(){closePlayer();session=null;username=null;otherId=null;filesCache=[];avatars={};refreshAvatarBlobUrls();channels.forEach(c=>db&&db.removeChannel(c));channels=[];
@@ -203,9 +155,6 @@ function showLogin(){closePlayer();session=null;username=null;otherId=null;files
  $("dashboard").classList.add("hidden");$("footer").classList.add("hidden");$("copyright").classList.add("hidden");$("loginScreen").classList.remove("hidden");resetLogin();renderLoginAvatars();loadLoginAvatars()}
 async function logout(){showLogin();if(db)await db.auth.signOut({scope:"local"})}
 
-/* ---------- Navegação ---------- */
-
-/* ---------- IA · Continuar letra (Groq via Edge Function, chave protegida) ---------- */
 async function generateVerse() {
   const input = $("iaInput").value.trim();
   const style = $("iaStyle").value;
@@ -276,19 +225,18 @@ document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>swit
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.nav)));
 async function refreshAll(){await loadProfiles();await Promise.all([loadFiles(),loadMessages(true)])}
 
-/* ---------- Arquivos ---------- */
 async function loadFiles(){if(!session)return;const my=++fileSeq;const {data,error}=await db.from("shared_files").select("*").order("created_at",{ascending:false});if(!session||my!==fileSeq)return;
- if(error){$("fileList").innerHTML='<div class="empty">Não foi possível carregar os arquivos. Verifique o SQL e as permissões.</div>';return}
+ if(error){$("fileList").innerHTML='<div class="empty">Não foi possível carregar os arquivos.</div>';return}
  filesCache=data||[];$("fileCount").textContent=filesCache.length;$("sharedCount").textContent=filesCache.filter(f=>f.shared_with===session.user.id).length;
- $("fileList").innerHTML=filesCache.map(f=>fileMarkup(f)).join("")||'<div class="empty">Sua biblioteca está vazia. Envie seu primeiro arquivo.</div>';
- $("recentFiles").innerHTML=filesCache.slice(0,3).map(f=>fileMarkup(f,false)).join("")||'<div class="empty">Nenhum arquivo enviado ainda.</div>'}
+ $("fileList").innerHTML=filesCache.map(f=>fileMarkup(f)).join("")||'<div class="empty">Sua biblioteca está vazia.</div>';
+ $("recentFiles").innerHTML=filesCache.slice(0,3).map(f=>fileMarkup(f,false)).join("")||'<div class="empty">Nenhum arquivo enviado.</div>'}
 function fileMarkup(f,actions=true){const mine=f.owner_id===session.user.id,shared=!!f.shared_with,on=playingId===f.id;
  const play=isAudio(f)?`<button class="icon-btn play-row" title="Ouvir" aria-label="Ouvir" onclick="playFile('${f.id}')">${on&&!audio.paused?"❚❚":"▶"}</button>`:"";
  const own=mine?`<button class="icon-btn" title="${shared?"Remover compartilhamento":"Compartilhar"}" aria-label="${shared?"Remover compartilhamento":"Compartilhar"}" onclick="shareFile('${f.id}')">${shared?"↗":"⇧"}</button><button class="icon-btn" title="Excluir" aria-label="Excluir" onclick="deleteFile('${f.id}')">×</button>`:"";
  return `<div class="file-row${on?" playing":""}" data-id="${f.id}"><div class="file-icon">${fileIcon(f.file_name)}</div><div class="file-info"><b>${esc(f.file_name)}</b><small>${formatSize(f.file_size)} · ${mine?"Enviado por você":"De "+esc(f.owner_name)} · ${shared?"Compartilhado":"Privado"}</small></div>${actions?`<div class="file-actions">${play}<button class="icon-btn" title="Baixar" aria-label="Baixar" onclick="downloadFile('${f.id}')">↓</button>${own}</div>`:""}</div>`}
-async function uploadFiles(list){if(!list.length||!session)return;if(uploading){toast("Um envio já está em andamento. Aguarde terminar para selecionar mais arquivos.");return}uploading=true;const status=$("uploadStatus");let ok=0,fail=0;
+async function uploadFiles(list){if(!list.length||!session)return;if(uploading){toast("Um envio já está em andamento.");return}uploading=true;const status=$("uploadStatus");let ok=0,fail=0;
  for(const file of list){
-  if(file.size>MAX_UPLOAD_MB*1048576){fail++;toast(file.name+" passa de "+MAX_UPLOAD_MB+" MB (limite do plano gratuito).");continue}
+  if(file.size>MAX_UPLOAD_MB*1048576){fail++;toast(file.name+" passa de "+MAX_UPLOAD_MB+" MB.");continue}
   status.textContent="Enviando "+file.name+"… ("+(ok+fail+1)+"/"+list.length+")";
   try{const path=session.user.id+"/"+uid()+"-"+file.name.replace(/[^\w.\-() ]/g,"_");
    const ext=(file.name.split(".").pop()||"").toLowerCase(),mimeByExt={mp3:"audio/mpeg",wav:"audio/wav",flac:"audio/flac",m4a:"audio/mp4",aac:"audio/aac",ogg:"audio/ogg",opus:"audio/ogg",aif:"audio/aiff",aiff:"audio/aiff"};const detectedMime=file.type||mimeByExt[ext]||"application/octet-stream";
@@ -308,16 +256,15 @@ async function downloadFile(id){const f=filesCache.find(x=>x.id===id);if(!f)retu
 async function getUserId(name){const {data,error}=await db.from("profiles").select("id").eq("username",name).single();if(error)throw error;return data.id}
 async function shareFile(id){const f=filesCache.find(x=>x.id===id);if(!f||f.owner_id!==session?.user?.id)return;const other=username==="znisback"?"lnisback":"znisback";
  try{let target=null;if(f.shared_with){if(!confirm("Remover o compartilhamento deste arquivo?"))return;target=null}else{if(!confirm('Compartilhar "'+f.file_name+'" com '+other+"?"))return;target=await getUserId(other)}
-  const {data,error}=await db.from("shared_files").update({shared_with:target}).eq("id",id).eq("owner_id",session.user.id).select("id,shared_with");if(error)throw error;if(!data?.length)throw new Error("Nenhum registro foi atualizado pelas permissões do banco.");toast(target?"Arquivo compartilhado com "+other+".":"Compartilhamento removido.");await loadFiles()}
- catch(err){console.error("shareFile",err);toast("Não foi possível alterar o compartilhamento: "+(err.message||"verifique as permissões SQL."))}}
+  const {data,error}=await db.from("shared_files").update({shared_with:target}).eq("id",id).eq("owner_id",session.user.id).select("id,shared_with");if(error)throw error;if(!data?.length)throw new Error("Nenhum registro foi atualizado.");toast(target?"Arquivo compartilhado com "+other+".":"Compartilhamento removido.");await loadFiles()}
+ catch(err){console.error("shareFile",err);toast("Não foi possível alterar o compartilhamento: "+(err.message||"verifique as permissões."))}}
 async function deleteFile(id){const f=filesCache.find(x=>x.id===id);if(!f||f.owner_id!==session?.user?.id||!confirm("Excluir "+f.file_name+" permanentemente?"))return;
- try{const {data:rows,error:e1}=await db.from("shared_files").delete().eq("id",id).eq("owner_id",session.user.id).select("id,storage_path");if(e1)throw e1;if(!rows?.length)throw new Error("O banco não confirmou a exclusão; arquivo mantido no armazenamento.");
-  const {error:e2}=await db.storage.from("studio-files").remove([rows[0].storage_path]);if(e2){toast("Registro removido, mas o arquivo no armazenamento precisa de limpeza: "+e2.message)}else toast("Arquivo excluído.")}
+ try{const {data:rows,error:e1}=await db.from("shared_files").delete().eq("id",id).eq("owner_id",session.user.id).select("id,storage_path");if(e1)throw e1;if(!rows?.length)throw new Error("O banco não confirmou a exclusão.");
+  const {error:e2}=await db.storage.from("studio-files").remove([rows[0].storage_path]);if(e2){toast("Registro removido, mas o arquivo no armazenamento precisa de limpeza.")}else toast("Arquivo excluído.")}
  catch(err){console.error("deleteFile",err);toast("Falha ao excluir: "+(err.message||"verifique as permissões."))}await loadFiles()}
 
-/* ---------- Chat ---------- */
 async function loadMessages(force){if(!session)return;const my=++msgSeq;const {data,error,count}=await db.from("messages").select("*",{count:"exact"}).order("created_at",{ascending:false}).limit(200);if(!session||my!==msgSeq)return;
- const box=$("chatMessages");if(error){box.innerHTML='<div class="empty">Não foi possível carregar o chat. Verifique as permissões.</div>';return}
+ const box=$("chatMessages");if(error){box.innerHTML='<div class="empty">Não foi possível carregar o chat.</div>';return}
  const stick=force||box.scrollHeight-box.scrollTop-box.clientHeight<80,list=(data||[]).reverse();
  box.innerHTML=list.map(m=>`<div class="bubble ${m.sender_id===session.user.id?"mine":""}"><b class="who">${avatarHTML(m.sender_name,"sm")}${esc(m.sender_name)}</b><p>${esc(m.body)}</p><small>${new Date(m.created_at).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}</small></div>`).join("")||'<div class="empty">A conversa começa aqui. Mande um salve!</div>';
  if(stick)box.scrollTop=box.scrollHeight;$("messageCount").textContent=count??list.length}
@@ -326,7 +273,6 @@ $("chatForm").addEventListener("submit",async e=>{e.preventDefault();const input
  catch(err){toast("Mensagem não enviada. Verifique a conexão.")}
  finally{btn.disabled=false}});
 
-/* ---------- Perfil (foto) ---------- */
 const okAvatar=a=>typeof a==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(a);
 function avatarHTML(name,cls=""){const src=avatarBlobUrls[name]||avatars[name];const fallback=name==="znisback"?"ZB":name==="lnisback"?"LB":(name||"?")[0].toUpperCase();return src?`<img class="avatar ${cls}" src="${src}" alt="Foto de ${esc(name)}">`:`<span class="avatar ${cls}">${esc(fallback)}</span>`}
 function renderLoginAvatars(){if($("loginAvatarZ"))$("loginAvatarZ").innerHTML=avatarHTML("znisback","login-avatar");if($("loginAvatarL"))$("loginAvatarL").innerHTML=avatarHTML("lnisback","login-avatar")}
@@ -341,10 +287,9 @@ function imageToAvatar(file){return new Promise((res,rej)=>{const url=URL.create
 async function saveAvatar(value){const {data,error}=await db.from("profiles").update({avatar:value}).eq("id",session.user.id).select("id");if(error||!data?.length)throw error||new Error("sem permissão");if(value)avatars[username]=value;else delete avatars[username];refreshAvatarBlobUrls();renderProfile();loadMessages();renderLoginAvatars()}
 $("avatarInput").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||!session)return;
  try{await saveAvatar(await imageToAvatar(f));toast("Foto de perfil atualizada.")}
- catch(err){toast(err.message==="imagem inválida"?"Formato de imagem não suportado. Use JPG ou PNG.":"Não foi possível salvar a foto. Rode o SQL novo no Supabase.")}});
+ catch(err){toast(err.message==="imagem inválida"?"Formato de imagem não suportado. Use JPG ou PNG.":"Não foi possível salvar a foto.")}});
 async function removeAvatar(){if(!avatars[username]||!confirm("Remover sua foto de perfil?"))return;try{await saveAvatar(null);toast("Foto removida.")}catch(err){toast("Não foi possível remover a foto.")}}
 
-/* ---------- Player de áudio ---------- */
 const AUDIO_EXT=["mp3","wav","flac","m4a","aac","ogg","oga","opus","aif","aiff"];
 const isAudio=f=>(f.mime_type||"").startsWith("audio/")||AUDIO_EXT.includes((f.file_name.split(".").pop()||"").toLowerCase());
 const audio=$("audio"),fmtT=t=>{if(!isFinite(t))return"0:00";t=Math.floor(t);return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
@@ -359,11 +304,10 @@ async function playFile(id){const f=filesCache.find(x=>x.id===id);if(!f)return;c
  try{await audio.play()}catch(e){}}
 function closePlayer(){playSeq++;playingId=null;audio.pause();audio.removeAttribute("src");audio.load();$("player").classList.add("hidden");document.body.classList.remove("has-player");$("seek").value=0;$("playerTime").textContent="0:00";$("playBtn").textContent="▶";highlight()}
 ["timeupdate","loadedmetadata"].forEach(ev=>audio.addEventListener(ev,tick));["play","pause","ended"].forEach(ev=>audio.addEventListener(ev,syncPlayer));
-audio.addEventListener("error",()=>{if(playingId)toast("Não foi possível tocar este áudio. Tente baixar o arquivo.")});
+audio.addEventListener("error",()=>{if(playingId)toast("Não foi possível tocar este áudio.")});
 $("playBtn").addEventListener("click",()=>audio.paused?audio.play().catch(()=>{}):audio.pause());
 $("seek").addEventListener("input",e=>{seeking=true;clearTimeout(seekT);seekT=setTimeout(()=>seeking=false,500);if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=e.target.value/1000*audio.duration});
 
-/* ---------- Tempo real ---------- */
 const refreshMessages=debounce(()=>loadMessages()),refreshFiles=debounce(()=>loadFiles()),refreshProfiles=debounce(async()=>{await loadProfiles();loadMessages()});
 function subscribeRealtime(){channels.forEach(c=>db.removeChannel(c));channels=[];
  const sub=(table,ev,fn)=>channels.push(db.channel("studio-"+table).on("postgres_changes",{event:ev,schema:"public",table},fn).subscribe());
@@ -372,13 +316,12 @@ function subscribeRealtime(){channels.forEach(c=>db.removeChannel(c));channels=[
 window.addEventListener("online",()=>{if(session){loadMessages(true);loadFiles();loadProfiles()}});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&session){loadMessages(true);loadFiles()}});
 
-/* ---------- Início ---------- */
-async function init(){try{if(!configured()||!window.supabase){toast("Não foi possível iniciar o estúdio. Verifique a configuração do Supabase e a conexão.");return}
+async function init(){try{if(!configured()||!window.supabase){toast("Não foi possível iniciar o estúdio. Verifique a conexão.");return}
  db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{detectSessionInUrl:false}});
  loadLoginAvatars();
  db.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"&&session)showLogin()});
  const {data}=await db.auth.getSession();if(data.session){session=data.session;await enterApp()}}
- catch(e){console.error(e);toast("Falha ao iniciar o estúdio. Verifique a internet e recarregue a página.")}
+ catch(e){console.error(e);toast("Falha ao iniciar o estúdio. Recarregue a página.")}
  finally{document.body.classList.remove("booting")}}
 init();
 </script>
