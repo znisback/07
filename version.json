@@ -1,0 +1,13 @@
+{
+  "name": "ZnisBack Studio",
+  "version": "1.0.0",
+  "build": 1,
+  "updated_at": "2026-11-26",
+  "notes": [
+    "Lançamento inicial",
+    "Login individual para znisback e lnisback",
+    "Upload e compartilhamento privado de arquivos",
+    "Chat entre os dois usuários",
+    "Aba UPDT e interface mobile-first"
+  ]
+}
